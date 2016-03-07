@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
 {
     pthread_t sender, receiver;
     int rc = 0;
+    void* threadRet;
     
     printf("Creating receiver.\n");
     rc = pthread_create(&receiver, NULL, recvWrapper, NULL);
@@ -26,11 +27,10 @@ int main(int argc, char *argv[])
         return -2;
     }
 
-    void* threadRet;
     pthread_join(sender, &threadRet);
-    printf("Sender exited with return code: %i\n", (int)threadRet);
+    printf("Sender exited with return code: %lu\n", (size_t)threadRet);
     pthread_join(receiver, &threadRet);
-    printf("Receiver exited with return code: %i\n", (int)threadRet);
+    printf("Receiver exited with return code: %lu\n", (size_t)threadRet);
     
     printf("Exitting.\n");
     return 0;
@@ -38,11 +38,11 @@ int main(int argc, char *argv[])
 
 
 void* sendWrapper(void* threadId) {
-    int rc = gefSockSend();
+    size_t rc = gefSockSend();
     pthread_exit((void *) rc);
 }
 
 void* recvWrapper(void* threadid) {
-    int rc = gefSockReceive();
+    size_t rc = gefSockReceive();
     pthread_exit((void *) rc);
 }
