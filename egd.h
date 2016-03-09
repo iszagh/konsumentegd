@@ -64,11 +64,11 @@ int gefSockReceive() {
     // Blokujacy nasluch na sockecie.
     */
     recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
-    if (recivedBytes != sizeof(msgEGD)) {
-        fprintf(stderr, "Partial or no read\n");
-        close(socketDesc);
-        return -3;
-    }
+//    if (recivedBytes != sizeof(msgEGD)) {
+//        fprintf(stderr, "Partial or no read\n");
+//        close(socketDesc);
+//        return -3;
+//    }
     close(socketDesc);
 
     fprintf(stdout, "%s| Received EGD msg, dumping contents:\n", __func__);
@@ -82,9 +82,11 @@ int gefSockReceive() {
     fprintf(stdout, "status: %#lx\n", msgEGD.status);
     fprintf(stdout, "configSignature: %#lx\n", msgEGD.configSignature);
     fprintf(stdout, "reserved: %#lx\n", msgEGD.reserved);
-    /*
-    // unsigned char fprintf(stdout, "" msgEGD.productionData[1400]
-    */
+    fprintf(stdout, "data: %#lx\n", msgEGD.productionData[1400]);
+
+    int i;
+    const unsigned char * const px = (unsigned char*)&msgEGD;
+    for (i=0; i<sizeof(msgEGD); ++i) printf("%02x ", px[i]);
 
     return 0;
 }
