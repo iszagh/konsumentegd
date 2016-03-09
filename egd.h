@@ -6,20 +6,40 @@
 #include <string.h> 
 #include <unistd.h>
 #include <time.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #pragma pack(2)  /* change default packing to 2 bytes */
-#define GEF_EGD_UDP_DATA_PORT 0x4746 
+#define GEF_EGD_UDP_DATA_PORT 0x4746
+
+#define EXPECTED_DATA_LENGTH 2
+
+
+/*
+ * https://stackoverflow.com/a/3208376
+ */
+#define BYTETOBINARYPATTERN "%d%d%d%d%d%d%d%d"
+#define BYTETOBINARY(byte)  \
+  (byte & 0x80 ? 1 : 0), \
+  (byte & 0x40 ? 1 : 0), \
+  (byte & 0x20 ? 1 : 0), \
+  (byte & 0x10 ? 1 : 0), \
+  (byte & 0x08 ? 1 : 0), \
+  (byte & 0x04 ? 1 : 0), \
+  (byte & 0x02 ? 1 : 0), \
+  (byte & 0x01 ? 1 : 0)
+
 struct GEF_EGD_DATA {
-    unsigned short pduTypeVersion; /* */
-    unsigned short requestId;
-    unsigned long producerId;
-    unsigned long exchangeId;
-    unsigned long timeStampSec;
-    unsigned long timeStampNanoSec;
-    unsigned long status;
-    unsigned long configSignature;
-    unsigned long reserved;
-    unsigned char productionData[1400];
+    uint16_t pduTypeVersion; /* */
+    uint16_t requestId;
+    uint32_t producerId;
+    uint32_t exchangeId;
+    uint32_t timeStampSec;
+    uint32_t timeStampNanoSec;
+    uint32_t status;
+    uint32_t configSignature;
+    uint32_t reserved;
+    uint8_t productionData[EXPECTED_DATA_LENGTH];
 };
 
 
@@ -64,11 +84,13 @@ int gefSockReceive() {
     // Blokujacy nasluch na sockecie.
     */
     recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
-//    if (recivedBytes != sizeof(msgEGD)) {
-//        fprintf(stderr, "Partial or no read\n");
-//        close(socketDesc);
-//        return -3;
-//    }
+    if (recivedBytes != sizeof(msgEGD)) {
+        fprintf(stderr, "Received bytes: %u\n", recivedBytes);
+        fprintf(stderr, "Expected bytes: %lu\n", sizeof(msgEGD));
+        fprintf(stderr, "Partial or no read\n");
+        close(socketDesc);
+        return -3;
+    }
     close(socketDesc);
 
     fprintf(stdout, "%s| Received EGD msg, dumping contents:\n", __func__);
@@ -76,15 +98,19 @@ int gefSockReceive() {
     fprintf(stdout, "requestId: %#hx\n", msgEGD.requestId);
     tempAddr.s_addr = msgEGD.producerId;
     fprintf(stdout, "producerId: %s\n", inet_ntoa(tempAddr));
-    fprintf(stdout, "exchangeId: %#lx\n", msgEGD.exchangeId);
-    fprintf(stdout, "timeStampSec: %#lx\n", msgEGD.timeStampSec);
-    fprintf(stdout, "timeStampNanoSec: %#lx\n", msgEGD.timeStampNanoSec);
-    fprintf(stdout, "status: %#lx\n", msgEGD.status);
-    fprintf(stdout, "configSignature: %#lx\n", msgEGD.configSignature);
-    fprintf(stdout, "reserved: %#lx\n", msgEGD.reserved);
-    fprintf(stdout, "data: %#lx\n", msgEGD.productionData[1400]);
+    fprintf(stdout, "exchangeId: %u\n", msgEGD.exchangeId);
+    fprintf(stdout, "timeStampSec: %#x\n", msgEGD.timeStampSec);
+    fprintf(stdout, "timeStampNanoSec: %#x\n", msgEGD.timeStampNanoSec);
+    fprintf(stdout, "status: %u\n", msgEGD.status);
+    fprintf(stdout, "configSignature: %u\n", msgEGD.configSignature);
+    fprintf(stdout, "reserved: %u\n", msgEGD.reserved);
+    fprintf(stdout, "data: ");
 
     int i;
+    for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
+
+    fprintf(stdout, "\nFull EGD structure dump:\n");
+
     const unsigned char * const px = (unsigned char*)&msgEGD;
     for (i=0; i<sizeof(msgEGD); ++i) printf("%02x ", px[i]);
 
