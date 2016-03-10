@@ -47,7 +47,7 @@ int gefSockReceive() {
     int socketDesc;
     struct sockaddr_in host_addr;
     struct GEF_EGD_DATA msgEGD;
-    struct in_addr tempAddr;
+    //struct in_addr tempAddr;
     int recivedBytes;
 
     /* Wypelnianie strukturki adresu */
@@ -61,15 +61,9 @@ int gefSockReceive() {
     // SOCK_DGRAM - datagramy
     // 0 - protokol defaultowy dla SOCK_DGRAM
     */
-    socketDesc = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socketDesc < 0) {
-        fprintf(stderr, "Could not create socket.\n");
-        return -1;
-    }
-
+    
     /*
     // Socket od teraz slucha na podanym porcie
-    */
     if (bind(socketDesc,
              (const struct sockaddr *) &host_addr,
              sizeof(host_addr)))
@@ -80,39 +74,65 @@ int gefSockReceive() {
 
     memset(&msgEGD, 0, sizeof(msgEGD));
 
+    */
     /*
     // Blokujacy nasluch na sockecie.
     */
-    recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
-    if (recivedBytes != sizeof(msgEGD)) {
-        fprintf(stderr, "Received bytes: %u\n", recivedBytes);
-        fprintf(stderr, "Expected bytes: %lu\n", sizeof(msgEGD));
-        fprintf(stderr, "Partial or no read\n");
-        close(socketDesc);
-        return -3;
+    while (1)
+    {
+      socketDesc = socket(AF_INET, SOCK_DGRAM, 0);
+      if (socketDesc < 0) {
+   //       fprintf(stderr, "Could not create socket.\n");
+  //        return -1;
+        continue;
+      }
+
+      if (bind(socketDesc,
+      (const struct sockaddr *) &host_addr,
+      sizeof(host_addr)))
+      {
+       // fprintf(stderr, "Error binding socket.\n");
+      continue;
+      //  return -2;
+      }
+      
+      memset(&msgEGD, 0, sizeof(msgEGD));
+
+
+      recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
+      if (recivedBytes != sizeof(msgEGD)) {
+          fprintf(stderr, "Received bytes: %u\n", recivedBytes);
+          fprintf(stderr, "Expected bytes: %lu\n", sizeof(msgEGD));
+          fprintf(stderr, "Partial or no read\n");
+        //  close(socketDesc);
+         // return -3;
+        continue;
+      }
+      close(socketDesc);
+   
+   /*   fprintf(stdout, "%s| Received EGD msg, dumping contents:\n", __func__);
+      fprintf(stdout, "pduTypeVersion: %#hx\n", msgEGD.pduTypeVersion);
+      fprintf(stdout, "requestId: %#hx\n", msgEGD.requestId);
+      tempAddr.s_addr = msgEGD.producerId;
+      fprintf(stdout, "producerId: %s\n", inet_ntoa(tempAddr));
+      fprintf(stdout, "exchangeId: %u\n", msgEGD.exchangeId);
+      fprintf(stdout, "timeStampSec: %#x\n", msgEGD.timeStampSec);
+      fprintf(stdout, "timeStampNanoSec: %#x\n", msgEGD.timeStampNanoSec);
+      fprintf(stdout, "status: %u\n", msgEGD.status);
+      fprintf(stdout, "configSignature: %u\n", msgEGD.configSignature);
+      fprintf(stdout, "reserved: %u\n", msgEGD.reserved);
+      fprintf(stdout, "data: "); */
+   
+      int i;
+      for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
+   
+      printf("\n");
     }
-    close(socketDesc);
-
-    fprintf(stdout, "%s| Received EGD msg, dumping contents:\n", __func__);
-    fprintf(stdout, "pduTypeVersion: %#hx\n", msgEGD.pduTypeVersion);
-    fprintf(stdout, "requestId: %#hx\n", msgEGD.requestId);
-    tempAddr.s_addr = msgEGD.producerId;
-    fprintf(stdout, "producerId: %s\n", inet_ntoa(tempAddr));
-    fprintf(stdout, "exchangeId: %u\n", msgEGD.exchangeId);
-    fprintf(stdout, "timeStampSec: %#x\n", msgEGD.timeStampSec);
-    fprintf(stdout, "timeStampNanoSec: %#x\n", msgEGD.timeStampNanoSec);
-    fprintf(stdout, "status: %u\n", msgEGD.status);
-    fprintf(stdout, "configSignature: %u\n", msgEGD.configSignature);
-    fprintf(stdout, "reserved: %u\n", msgEGD.reserved);
-    fprintf(stdout, "data: ");
-
-    int i;
-    for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
 
     fprintf(stdout, "\nFull EGD structure dump:\n");
 
     const unsigned char * const px = (unsigned char*)&msgEGD;
-    for (i=0; i<sizeof(msgEGD); ++i) printf("%02x ", px[i]);
+    for (unsigned int i=0; i<sizeof(msgEGD); ++i) printf("%02x ", px[i]);
 
     return 0;
 }
@@ -121,7 +141,7 @@ int gefSockSend() {
     int socketDesc;
     struct sockaddr_in dest_addr;
     struct GEF_EGD_DATA msgEGD;
-    int bytesSend;
+    unsigned int bytesSend;
     int retVal;
 
     /*
@@ -144,9 +164,10 @@ int gefSockSend() {
     msgEGD.status           = 1;
     msgEGD.configSignature  = 0;
     msgEGD.reserved         = 0;
-    /*
-    // unsigned char msgEGD.productionData = <<to be assigned>>;
-    */
+    
+    msgEGD.productionData[0] = 0;
+    msgEGD.productionData[1] = 1;
+
 
     /*
     // tworzy socket
