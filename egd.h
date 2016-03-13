@@ -54,6 +54,7 @@ int gefSockReceive() {
     struct GEF_EGD_DATA msgEGD;
     //struct in_addr tempAddr;
     int recivedBytes;
+    uint8_t printingData[EXPECTED_DATA_LENGTH];
 
     /* Wypelnianie strukturki adresu */
     memset(&host_addr, 0, sizeof(host_addr));
@@ -126,7 +127,7 @@ int gefSockReceive() {
 
       struct timeval tv;
       tv.tv_sec = 0;
-      tv.tv_usec = 1000;
+      tv.tv_usec = 100000;
 
       setsockopt(socketDesc, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(struct timeval)); //set timeout
 
@@ -139,7 +140,12 @@ int gefSockReceive() {
        // return -3;
 
       int i;
-      for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
+      for (i=0; i < EXPECTED_DATA_LENGTH; i++) 
+      {
+        printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
+        printingData[i] = msgEGD.productionData[i];
+      }
+
       printf("\n");
       }
       close(socketDesc);
@@ -160,15 +166,26 @@ int gefSockReceive() {
    
 
       window.clear();
+
+      char bitCount;
       for (unsigned int i = 0; i < circles.size(); ++i)
-      window.draw(circles.at(i));
+      {
+        if (i%8 == 0)
+          bitCount = 0x1;
+        std::cout<< (unsigned int)printingData[i/8] << "  " << (unsigned int)bitCount << 
+         "    " << (printingData[i/8] & bitCount) << std::endl;
+        if (printingData[i/8] & bitCount )
+
+
+
+
+        window.draw(circles.at(((i/8) * 8) + (8-((i)%8)) -1));
+        bitCount <<= 1;
+      }
+
       window.display();
     }
 
-    fprintf(stdout, "\nFull EGD structure dump:\n");
-
-    const unsigned char * const px = (unsigned char*)&msgEGD;
-    for (unsigned int i=0; i<sizeof(msgEGD); ++i) printf("%02x ", px[i]);
 
     return 0;
 }
@@ -201,8 +218,8 @@ int gefSockSend() {
     msgEGD.configSignature  = 0;
     msgEGD.reserved         = 0;
     
-    msgEGD.productionData[0] = 0;
-    msgEGD.productionData[1] = 1;
+    msgEGD.productionData[0] = 25;
+    msgEGD.productionData[1] = 255;
 
 
     /*
