@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -8,6 +10,8 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#include "SFML-2.3.2/include/SFML/Graphics.hpp"
 
 #pragma pack(2)  /* change default packing to 2 bytes */
 #define GEF_EGD_UDP_DATA_PORT 0x4746
@@ -42,6 +46,7 @@ struct GEF_EGD_DATA {
     uint8_t productionData[EXPECTED_DATA_LENGTH];
 };
 
+#pragma pack()
 
 int gefSockReceive() {
     int socketDesc;
@@ -78,8 +83,28 @@ int gefSockReceive() {
     /*
     // Blokujacy nasluch na sockecie.
     */
-    while (1)
+ 
+  //GUI INIT
+    sf::RenderWindow window( sf::VideoMode( 320, 240 ), "Konsument" );
+
+    std::vector <sf::CircleShape> circles (8 * EXPECTED_DATA_LENGTH);
+    for (unsigned int i = 0; i < circles.size(); ++i)
     {
+      circles.at(i).setPosition((40*i)%(40*8),(i/8)*40);
+      circles.at(i).setRadius(20.f);
+      circles.at(i).setFillColor(sf::Color::Green);
+    }
+
+    while (window.isOpen())
+    {
+      sf::Event event;
+      while (window.pollEvent(event))
+      {
+        if (event.type == sf::Event::Closed)
+          window.close();
+      }     
+
+
       socketDesc = socket(AF_INET, SOCK_DGRAM, 0);
       if (socketDesc < 0) {
    //       fprintf(stderr, "Could not create socket.\n");
@@ -99,14 +124,23 @@ int gefSockReceive() {
       memset(&msgEGD, 0, sizeof(msgEGD));
 
 
+      struct timeval tv;
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000;
+
+      setsockopt(socketDesc, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(struct timeval)); //set timeout
+
       recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
-      if (recivedBytes != sizeof(msgEGD)) {
-          fprintf(stderr, "Received bytes: %u\n", recivedBytes);
-          fprintf(stderr, "Expected bytes: %lu\n", sizeof(msgEGD));
-          fprintf(stderr, "Partial or no read\n");
-        //  close(socketDesc);
-         // return -3;
-        continue;
+      if (recivedBytes == sizeof(msgEGD)) {
+       //   fprintf(stderr, "Received bytes: %u\n", recivedBytes);
+       //   fprintf(stderr, "Expected bytes: %lu\n", sizeof(msgEGD));
+       //   fprintf(stderr, "Partial or no read\n");
+       //  close(socketDesc);
+       // return -3;
+
+      int i;
+      for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
+      printf("\n");
       }
       close(socketDesc);
    
@@ -123,10 +157,12 @@ int gefSockReceive() {
       fprintf(stdout, "reserved: %u\n", msgEGD.reserved);
       fprintf(stdout, "data: "); */
    
-      int i;
-      for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
    
-      printf("\n");
+
+      window.clear();
+      for (unsigned int i = 0; i < circles.size(); ++i)
+      window.draw(circles.at(i));
+      window.display();
     }
 
     fprintf(stdout, "\nFull EGD structure dump:\n");
