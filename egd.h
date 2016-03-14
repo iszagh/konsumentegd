@@ -59,7 +59,7 @@ int gefSockReceive() {
     /* Wypelnianie strukturki adresu */
     memset(&host_addr, 0, sizeof(host_addr));
     host_addr.sin_family = AF_INET;
-    host_addr.sin_port   = htons(GEF_EGD_UDP_DATA_PORT);
+    host_addr.sin_port = htons(GEF_EGD_UDP_DATA_PORT);
     host_addr.sin_addr.s_addr = INADDR_ANY;
     /*
     // tworzy socket
@@ -67,7 +67,7 @@ int gefSockReceive() {
     // SOCK_DGRAM - datagramy
     // 0 - protokol defaultowy dla SOCK_DGRAM
     */
-    
+
     /*
     // Socket od teraz slucha na podanym porcie
     if (bind(socketDesc,
@@ -121,9 +121,8 @@ int gefSockReceive() {
       continue;
       //  return -2;
       }
-      
-      memset(&msgEGD, 0, sizeof(msgEGD));
 
+      memset(&msgEGD, 0, sizeof(msgEGD));
 
       struct timeval tv;
       tv.tv_sec = 0;
@@ -172,14 +171,12 @@ int gefSockReceive() {
       {
         if (i%8 == 0)
           bitCount = 0x1;
-        std::cout<< (unsigned int)printingData[i/8] << "  " << (unsigned int)bitCount << 
-         "    " << (printingData[i/8] & bitCount) << std::endl;
         if (printingData[i/8] & bitCount )
+          circles.at(i).setFillColor(sf::Color::Green);
+        else
+          circles.at(i).setFillColor(sf::Color::Red);
 
-
-
-
-        window.draw(circles.at(((i/8) * 8) + (8-((i)%8)) -1));
+        window.draw(circles.at(i));
         bitCount <<= 1;
       }
 
@@ -218,7 +215,7 @@ int gefSockSend() {
     msgEGD.configSignature  = 0;
     msgEGD.reserved         = 0;
     
-    msgEGD.productionData[0] = 25;
+    msgEGD.productionData[0] = 1;
     msgEGD.productionData[1] = 255;
 
 
