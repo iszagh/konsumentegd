@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "SFML-2.3.2/include/SFML/Graphics.hpp"
+#include "SFML/Graphics.hpp"
 
 #pragma pack(2)  /* change default packing to 2 bytes */
 #define GEF_EGD_UDP_DATA_PORT 0x4746
