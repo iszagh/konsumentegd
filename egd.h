@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -8,6 +10,8 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#include "SFML/Graphics.hpp"
 
 #pragma pack(2)  /* change default packing to 2 bytes */
 #define GEF_EGD_UDP_DATA_PORT 0x4746
@@ -42,148 +46,112 @@ struct GEF_EGD_DATA {
     uint8_t productionData[EXPECTED_DATA_LENGTH];
 };
 
+#pragma pack()
 
 int gefSockReceive() {
     int socketDesc;
     struct sockaddr_in host_addr;
     struct GEF_EGD_DATA msgEGD;
-    struct in_addr tempAddr;
+    //struct in_addr tempAddr;
     int recivedBytes;
+    uint8_t printingData[EXPECTED_DATA_LENGTH];
 
     /* Wypelnianie strukturki adresu */
     memset(&host_addr, 0, sizeof(host_addr));
     host_addr.sin_family = AF_INET;
-    host_addr.sin_port   = htons(GEF_EGD_UDP_DATA_PORT);
+    host_addr.sin_port = htons(GEF_EGD_UDP_DATA_PORT);
     host_addr.sin_addr.s_addr = INADDR_ANY;
-    /*
-    // tworzy socket
-    // AF_INET - internety a nie domena systemu
-    // SOCK_DGRAM - datagramy
-    // 0 - protokol defaultowy dla SOCK_DGRAM
-    */
-    socketDesc = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socketDesc < 0) {
-        fprintf(stderr, "Could not create socket.\n");
-        return -1;
-    }
 
-    /*
-    // Socket od teraz slucha na podanym porcie
-    */
-    if (bind(socketDesc,
-             (const struct sockaddr *) &host_addr,
-             sizeof(host_addr)))
+
+
+
+
+
+//GUI INIT
+    sf::RenderWindow window( sf::VideoMode( 320, 240 ), "Konsument" );
+
+
+
+    std::vector <sf::CircleShape> circles (8 * EXPECTED_DATA_LENGTH);
+
+    for (unsigned int i = 0; i < circles.size(); ++i)
     {
-        fprintf(stderr, "Error binding socket.\n");
-        return -2;
+      circles.at(i).setPosition((40*i)%(40*8),(i/8)*40);
+      circles.at(i).setRadius(20.f);
     }
 
-    memset(&msgEGD, 0, sizeof(msgEGD));
 
-    /*
-    // Blokujacy nasluch na sockecie.
-    */
-    recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
-    if (recivedBytes != sizeof(msgEGD)) {
-        fprintf(stderr, "Received bytes: %u\n", recivedBytes);
-        fprintf(stderr, "Expected bytes: %lu\n", sizeof(msgEGD));
-        fprintf(stderr, "Partial or no read\n");
-        close(socketDesc);
-        return -3;
-    }
-    close(socketDesc);
 
-    fprintf(stdout, "%s| Received EGD msg, dumping contents:\n", __func__);
-    fprintf(stdout, "pduTypeVersion: %#hx\n", msgEGD.pduTypeVersion);
-    fprintf(stdout, "requestId: %#hx\n", msgEGD.requestId);
-    tempAddr.s_addr = msgEGD.producerId;
-    fprintf(stdout, "producerId: %s\n", inet_ntoa(tempAddr));
-    fprintf(stdout, "exchangeId: %u\n", msgEGD.exchangeId);
-    fprintf(stdout, "timeStampSec: %#x\n", msgEGD.timeStampSec);
-    fprintf(stdout, "timeStampNanoSec: %#x\n", msgEGD.timeStampNanoSec);
-    fprintf(stdout, "status: %u\n", msgEGD.status);
-    fprintf(stdout, "configSignature: %u\n", msgEGD.configSignature);
-    fprintf(stdout, "reserved: %u\n", msgEGD.reserved);
-    fprintf(stdout, "data: ");
-
-    int i;
-    for (i=0; i < EXPECTED_DATA_LENGTH; i++) printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
-
-    fprintf(stdout, "\nFull EGD structure dump:\n");
-
-    const unsigned char * const px = (unsigned char*)&msgEGD;
-    for (i=0; i<sizeof(msgEGD); ++i) printf("%02x ", px[i]);
-
-    return 0;
-}
-
-int gefSockSend() {
-    int socketDesc;
-    struct sockaddr_in dest_addr;
-    struct GEF_EGD_DATA msgEGD;
-    int bytesSend;
-    int retVal;
-
-    /*
-    // Wypelnianie strukturki adresu
-    */
-    memset(&dest_addr, 0, sizeof(dest_addr));
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port   = htons(GEF_EGD_UDP_DATA_PORT);
-    inet_aton("127.0.0.1", &dest_addr.sin_addr);
-
-    /*
-    // Populowanie datagramu EGD
-    */
-    msgEGD.pduTypeVersion   = 0x010d; /* */
-    msgEGD.requestId        = 1;
-    msgEGD.producerId       = inet_addr("127.0.0.1");
-    msgEGD.exchangeId       = 1;
-    msgEGD.timeStampSec     = time(NULL);
-    msgEGD.timeStampNanoSec = 0;
-    msgEGD.status           = 1;
-    msgEGD.configSignature  = 0;
-    msgEGD.reserved         = 0;
-    /*
-    // unsigned char msgEGD.productionData = <<to be assigned>>;
-    */
-
-    /*
-    // tworzy socket
-    
-    // AF_INET - internety a nie domena systemu
-    // SOCK_DGRAM - datagramy
-    // 0 - protokol defaultowy dla SOCK_DGRAM
-    */
-    socketDesc = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socketDesc < 0) {
-        fprintf(stderr, "Could not create socket.\n");
-        return -1;
-    }
-
-    retVal = connect(socketDesc,
-                     (const struct sockaddr *) &dest_addr,
-                     sizeof(dest_addr));
-
-    if (retVal < 0)
+    while (window.isOpen())
     {
-        fprintf(stderr, "%s: Error connecting to socket.\n", __func__);
-        close(socketDesc);
-        return -2;
+      sf::Event event;
+      while (window.pollEvent(event))
+      {
+        if (event.type == sf::Event::Closed)
+        {
+          window.close();
+        }
+      }     
+
+
+      socketDesc = socket(AF_INET, SOCK_DGRAM, 0);
+      if (socketDesc < 0)
+      {
+        continue;
+      }
+
+      if (bind(socketDesc,
+      (const struct sockaddr *) &host_addr,
+      sizeof(host_addr)))
+      {
+       // fprintf(stderr, "Error binding socket.\n");
+      continue;
+      //  return -2;
+      }
+
+      memset(&msgEGD, 0, sizeof(msgEGD));
+
+      struct timeval tv;
+      tv.tv_sec = 0;
+      tv.tv_usec = 100000;
+
+      setsockopt(socketDesc, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(struct timeval)); //set timeout
+
+      recivedBytes = recv(socketDesc, &msgEGD, sizeof(msgEGD), 0);
+      if (recivedBytes == sizeof(msgEGD))
+      {
+
+        int i;
+        for (i=0; i < EXPECTED_DATA_LENGTH; i++) 
+        {
+          printf(BYTETOBINARYPATTERN, BYTETOBINARY(msgEGD.productionData[i]));
+          printingData[i] = msgEGD.productionData[i];
+        }
+   
+        printf("\n");
+      }
+      close(socketDesc);
+
+
+      window.clear();
+
+      char bitCount;
+      for (unsigned int i = 0; i < circles.size(); ++i)
+      {
+        if (i%8 == 0)
+          bitCount = 0x1;
+        if (printingData[i/8] & bitCount )
+          circles.at(i).setFillColor(sf::Color::Green);
+        else
+          circles.at(i).setFillColor(sf::Color::Red);
+
+        window.draw(circles.at(i));
+        bitCount <<= 1;
+      }
+
+      window.display();
     }
 
-    bytesSend = send(socketDesc, &msgEGD, sizeof(msgEGD), 0);
-    if (bytesSend < 0) {
-        fprintf(stderr, "Sending message failed.\n");
-        close(socketDesc);
-        return -3;
-    }
-    else if (bytesSend < sizeof(msgEGD)) {
-        fprintf(stderr, "Message sent partially.\n");
-        close(socketDesc);
-        return -4;
-    }
-    close(socketDesc);
 
     return 0;
 }
